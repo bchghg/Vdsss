@@ -1,0 +1,53 @@
+name: Story to Video Free
+on:
+  workflow_dispatch:
+    inputs:
+      story:
+        description: 'اكتب قصتك هنا (بالعربي أو الإنجليزي)'
+        required: true
+        default: 'A cat walking in a rainy city, neon lights'
+
+jobs:
+  make-video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Tools
+        run: pip install gradio_client deep-translator
+
+      - name: Generate Video
+        run: |
+          python - <<EOF
+          from gradio_client import Client
+          from deep_translator import GoogleTranslator
+          import os
+
+          # ترجمة القصة للإنجليزي لضمان أفضل نتيجة للموديل المجاني
+          arabic_text = "${{ github.event.inputs.story }}"
+          translated = GoogleTranslator(source='auto', target='en').translate(arabic_text)
+          print(f"القصة المترجمة: {translated}")
+
+          # استخدام محرك مجاني (Luma-Dream-Machine أو CogVideo)
+          try:
+              client = Client("TencentARC/Vidu") # مثال لموديل مجاني متاح حالياً
+              result = client.predict(
+                  prompt=translated,
+                  api_name="/generate_video"
+              )
+              # حفظ الفيديو باسم ثابت
+              os.rename(result, "final_story.mp4")
+              print("تم النجاح!")
+          except Exception as e:
+              print(f"حدث خطأ: {e}")
+          EOF
+
+      - name: Save Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-ai-video
+          path: final_story.mp4
