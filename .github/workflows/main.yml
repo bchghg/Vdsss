@@ -1,31 +1,27 @@
-name: Story to Professional Video
+name: Movie Direct Link Finder
+
 on:
   workflow_dispatch:
     inputs:
-      story:
-        description: 'اكتب وصف المشهد هنا'
+      movie_name:
+        description: 'اكتب اسم الفيلم أو المسلسل هنا'
         required: true
-        default: 'A majestic galaxy with stars and nebulae, cinematic lighting'
+        default: 'Inception'
 
 jobs:
-  build-video:
+  search:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Generate AI Image and Video
-        run: |
-          # 1. تنظيف النص وترجمته بشكل سريع
-          STORY_URL=$(echo "${{ github.event.inputs.story }}" | sed 's/ /%20/g')
-          
-          # 2. تحميل صورة احترافية بناءً على وصفك من محرك مجاني وسريع
-          curl -o scene.jpg "https://image.pollinations.ai/prompt/${STORY_URL}?width=1280&height=720&model=flux&nologo=true"
-          
-          # 3. استخدام ffmpeg لتحويل الصورة لفيديو مع حركة زووم سينمائية
-          ffmpeg -loop 1 -i scene.jpg -vf "zoompan=z='min(zoom+0.001,1.5)':d=125:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',setsar=1" -c:v libx264 -t 5 -pix_fmt yuv420p professional_video.mp4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          name: AI-Cinema-Video
-          path: professional_video.mp4
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Search Script
+        run: python search.py "${{ github.event.inputs.movie_name }}"
