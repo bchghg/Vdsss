@@ -1,11 +1,11 @@
-name: Story to Video Free
+name: Story to Video AI Free
 on:
   workflow_dispatch:
     inputs:
       story:
-        description: 'اكتب قصتك هنا'
+        description: 'اكتب قصتك هنا - البوت سيترجمها ويبدأ العمل'
         required: true
-        default: 'A majestic dragon flying over mountains'
+        default: 'فضاء يمشي فيه رائد فضاء ببطء'
 
 jobs:
   make-video:
@@ -26,34 +26,40 @@ jobs:
           from gradio_client import Client
           from deep_translator import GoogleTranslator
           import os
+          import time
 
-          # 1. ترجمة فورية
-          arabic_text = "${{ github.event.inputs.story }}"
-          translated = GoogleTranslator(source='auto', target='en').translate(arabic_text)
-          print(f"Processing: {translated}")
-
-          # 2. محرك فيديو بديل (Mochi-1-Preview) - غالباً يكون متاحاً
+          # 1. الترجمة التلقائية
           try:
-              client = Client("fffiloni/moco-mochi-preview-api") # محرك جديد
+              arabic_text = "${{ github.event.inputs.story }}"
+              translated = GoogleTranslator(source='auto', target='en').translate(arabic_text)
+              print(f"تمت الترجمة إلى: {translated}")
+          except:
+              translated = "${{ github.event.inputs.story }}"
+
+          # 2. محرك التوليد (استخدام محرك مستقر)
+          # سنحاول الاتصال بمحرك CogVideoX-2b الموفر للطاقة
+          try:
+              print("بدأ الاتصال بالسيرفر... قد يستغرق الأمر دقائق...")
+              client = Client("THUDM/CogVideoX-2b-Space")
               result = client.predict(
                   prompt=translated,
-                  negative_prompt="low quality, blurry",
-                  num_frames=41,
-                  api_name="/generate_video"
+                  api_name="/generate"
               )
-              # حفظ الفيديو
+              
+              # تحديد مسار الفيديو الناتج
               video_path = result if isinstance(result, str) else result[0]
-              os.rename(video_path, "final_story.mp4")
-              print("SUCCESS: Video generated!")
+              os.rename(video_path, "final_video.mp4")
+              print("نجحنا! تم توليد الفيديو.")
           except Exception as e:
-              print(f"Engine Busy: {e}")
-              with open("status.txt", "w") as f: f.write("Servers are busy now, try again later.")
+              print(f"المحرك مشغول حالياً. الخطأ: {e}")
+              with open("sorry.txt", "w") as f:
+                  f.write("السيرفرات المجانية مشغولة الآن، يرجى إعادة المحاولة بعد قليل.")
           EOF
 
-      - name: Upload Result
+      - name: Upload Final Video
         uses: actions/upload-artifact@v4
         with:
-          name: my-story-video
+          name: AI-Video-Result
           path: |
-            final_story.mp4
-            status.txt
+            final_video.mp4
+            sorry.txt
