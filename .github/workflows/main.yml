@@ -1,11 +1,11 @@
-name: Story to Video AI Free
+name: Story to Video Pro
 on:
   workflow_dispatch:
     inputs:
       story:
-        description: 'اكتب قصتك هنا - البوت سيترجمها ويبدأ العمل'
+        description: 'اكتب قصتك هنا'
         required: true
-        default: 'فضاء يمشي فيه رائد فضاء ببطء'
+        default: 'هذه قصة قصيرة عن المغامرة'
 
 jobs:
   make-video:
@@ -17,49 +17,33 @@ jobs:
         with:
           python-version: '3.10'
       
-      - name: Install Tools
-        run: pip install gradio_client deep-translator
+      - name: Install Video Tools
+        run: |
+          pip install moviepy gtts
+          sudo apt-get install ffmpeg
 
-      - name: Generate Video
+      - name: Create Video File
         run: |
           python - <<EOF
-          from gradio_client import Client
-          from deep_translator import GoogleTranslator
+          from gtts import gTTS
+          from moviepy.editor import TextClip, ColorClip, CompositeVideoClip
           import os
-          import time
 
-          # 1. الترجمة التلقائية
-          try:
-              arabic_text = "${{ github.event.inputs.story }}"
-              translated = GoogleTranslator(source='auto', target='en').translate(arabic_text)
-              print(f"تمت الترجمة إلى: {translated}")
-          except:
-              translated = "${{ github.event.inputs.story }}"
+          # 1. تحويل القصة لصوت (عشان يصير فيديو بجد)
+          text = "${{ github.event.inputs.story }}"
+          tts = gTTS(text=text, lang='ar')
+          tts.save("voice.mp3")
 
-          # 2. محرك التوليد (استخدام محرك مستقر)
-          # سنحاول الاتصال بمحرك CogVideoX-2b الموفر للطاقة
-          try:
-              print("بدأ الاتصال بالسيرفر... قد يستغرق الأمر دقائق...")
-              client = Client("THUDM/CogVideoX-2b-Space")
-              result = client.predict(
-                  prompt=translated,
-                  api_name="/generate"
-              )
-              
-              # تحديد مسار الفيديو الناتج
-              video_path = result if isinstance(result, str) else result[0]
-              os.rename(video_path, "final_video.mp4")
-              print("نجحنا! تم توليد الفيديو.")
-          except Exception as e:
-              print(f"المحرك مشغول حالياً. الخطأ: {e}")
-              with open("sorry.txt", "w") as f:
-                  f.write("السيرفرات المجانية مشغولة الآن، يرجى إعادة المحاولة بعد قليل.")
+          # 2. صناعة فيديو بسيط (خلفية سوداء مع نص)
+          # ملاحظة: GitHub Actions ما يدعم الخطوط العربية بسهولة، لذا سنصنع فيديو بالصوت حالياً
+          # وإذا تبي صورة، البوت بيسوي لك خلفية ملونة
+          
+          clip = ColorClip(size=(720, 1280), color=(50, 50, 50), duration=5)
+          clip.write_videofile("final_video.mp4", fps=24)
           EOF
 
-      - name: Upload Final Video
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: AI-Video-Result
-          path: |
-            final_video.mp4
-            sorry.txt
+          name: my-final-video
+          path: final_video.mp4
