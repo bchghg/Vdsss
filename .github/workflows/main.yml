@@ -5,7 +5,7 @@ on:
       story:
         description: 'اكتب قصتك هنا'
         required: true
-        default: 'A cat walking in space'
+        default: 'A majestic dragon flying over mountains'
 
 jobs:
   make-video:
@@ -27,31 +27,33 @@ jobs:
           from deep_translator import GoogleTranslator
           import os
 
+          # 1. ترجمة فورية
           arabic_text = "${{ github.event.inputs.story }}"
           translated = GoogleTranslator(source='auto', target='en').translate(arabic_text)
-          print(f"Translating to: {translated}")
+          print(f"Processing: {translated}")
 
+          # 2. محرك فيديو بديل (Mochi-1-Preview) - غالباً يكون متاحاً
           try:
-              # محرك Luma المتاح عبر Hugging Face كـ Space
-              client = Client("jbilcke-hf/Luma-Dream-Machine")
+              client = Client("fffiloni/moco-mochi-preview-api") # محرك جديد
               result = client.predict(
                   prompt=translated,
-                  api_name="/predict"
+                  negative_prompt="low quality, blurry",
+                  num_frames=41,
+                  api_name="/generate_video"
               )
-              # إذا كانت النتيجة مسار ملف
+              # حفظ الفيديو
               video_path = result if isinstance(result, str) else result[0]
               os.rename(video_path, "final_story.mp4")
-              print("Success!")
+              print("SUCCESS: Video generated!")
           except Exception as e:
-              print(f"Error: {e}")
-              with open("error_log.txt", "w") as f:
-                  f.write(f"المحرك مشغول حالياً. الخطأ: {e}")
+              print(f"Engine Busy: {e}")
+              with open("status.txt", "w") as f: f.write("Servers are busy now, try again later.")
           EOF
 
-      - name: Save Result
+      - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: ai-output
+          name: my-story-video
           path: |
             final_story.mp4
-            error_log.txt
+            status.txt
