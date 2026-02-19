@@ -5,45 +5,31 @@ on:
       story:
         description: 'اكتب قصتك هنا'
         required: true
-        default: 'هذه قصة قصيرة عن المغامرة'
+        default: 'مرحباً بك في عالم الذكاء الاصطناعي'
 
 jobs:
   make-video:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
       
-      - name: Install Video Tools
+      - name: Install Tools
         run: |
-          pip install moviepy gtts
-          sudo apt-get install ffmpeg
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg imagemagick
 
-      - name: Create Video File
+      - name: Create Video
         run: |
-          python - <<EOF
-          from gtts import gTTS
-          from moviepy.editor import TextClip, ColorClip, CompositeVideoClip
-          import os
-
-          # 1. تحويل القصة لصوت (عشان يصير فيديو بجد)
-          text = "${{ github.event.inputs.story }}"
-          tts = gTTS(text=text, lang='ar')
-          tts.save("voice.mp3")
-
-          # 2. صناعة فيديو بسيط (خلفية سوداء مع نص)
-          # ملاحظة: GitHub Actions ما يدعم الخطوط العربية بسهولة، لذا سنصنع فيديو بالصوت حالياً
-          # وإذا تبي صورة، البوت بيسوي لك خلفية ملونة
+          # تحويل النص لصورة ثم فيديو باستخدام ffmpeg (أضمن طريقة)
+          STORY_TEXT="${{ github.event.inputs.story }}"
           
-          clip = ColorClip(size=(720, 1280), color=(50, 50, 50), duration=5)
-          clip.write_videofile("final_video.mp4", fps=24)
-          EOF
+          # إنشاء فيديو بسيط (خلفية زرقاء ونقوش بيضاء) لمدة 5 ثواني
+          ffmpeg -f lavfi -i color=c=blue:s=1280x720:d=5 -vf \
+          "drawtext=text='$STORY_TEXT':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2" \
+          -c:v libx264 -tune stillimage -pix_fmt yuv420p final_video.mp4
 
-      - name: Upload
+      - name: Upload Video
         uses: actions/upload-artifact@v4
         with:
-          name: my-final-video
+          name: Final-Video
           path: final_video.mp4
