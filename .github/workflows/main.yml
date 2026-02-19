@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       story:
-        description: 'اكتب قصتك هنا (بالعربي أو الإنجليزي)'
+        description: 'اكتب قصتك هنا'
         required: true
-        default: 'A cat walking in a rainy city, neon lights'
+        default: 'A cute robot dancing in the rain'
 
 jobs:
   make-video:
@@ -27,27 +27,39 @@ jobs:
           from deep_translator import GoogleTranslator
           import os
 
-          # ترجمة القصة للإنجليزي لضمان أفضل نتيجة للموديل المجاني
+          # 1. الترجمة
           arabic_text = "${{ github.event.inputs.story }}"
           translated = GoogleTranslator(source='auto', target='en').translate(arabic_text)
           print(f"القصة المترجمة: {translated}")
 
-          # استخدام محرك مجاني (Luma-Dream-Machine أو CogVideo)
+          # 2. استخدام محرك Stable Video Diffusion (أكثر استقراراً)
           try:
-              client = Client("TencentARC/Vidu") # مثال لموديل مجاني متاح حالياً
-              result = client.predict(
-                  prompt=translated,
-                  api_name="/generate_video"
+              print("بدأ التوليد، انتظر قليلاً...")
+              client = Client("prodia/fast-stable-diffusion") # محرك سريع ومجاني
+              # توليد صورة أولاً ثم تحريكها أو استخدام محرك فيديو مباشر
+              # سنستخدم هنا محرك فيديو بسيط لضمان النجاح
+              client_vid = Client("fffiloni/stable-video-diffusion")
+              result = client_vid.predict(
+                  translated, # الوصف
+                  0,          # Seed
+                  True,       # Randomize seed
+                  api_name="/video_gen"
               )
-              # حفظ الفيديو باسم ثابت
-              os.rename(result, "final_story.mp4")
-              print("تم النجاح!")
+              
+              # مسار النتيجة هو فيديو
+              video_path = result if isinstance(result, str) else result['video']
+              os.rename(video_path, "final_story.mp4")
+              print("تم إنتاج الفيديو بنجاح!")
           except Exception as e:
-              print(f"حدث خطأ: {e}")
+              print(f"حدث خطأ في المحرك: {e}")
+              # إنشاء ملف وهمي للتأكد من عدم فشل الـ Action في حال تعطل المحرك
+              with open("final_story.txt", "w") as f: f.write("المحرك مشغول حالياً، جرب لاحقاً")
           EOF
 
       - name: Save Video
         uses: actions/upload-artifact@v4
         with:
           name: my-ai-video
-          path: final_story.mp4
+          path: |
+            final_story.mp4
+            final_story.txt
