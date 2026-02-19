@@ -1,35 +1,31 @@
-name: Story to Video Pro
+name: Story to Professional Video
 on:
   workflow_dispatch:
     inputs:
       story:
-        description: 'اكتب قصتك هنا'
+        description: 'اكتب وصف المشهد هنا'
         required: true
-        default: 'مرحباً بك في عالم الذكاء الاصطناعي'
+        default: 'A majestic galaxy with stars and nebulae, cinematic lighting'
 
 jobs:
-  make-video:
+  build-video:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Tools
+      - name: Generate AI Image and Video
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg imagemagick
-
-      - name: Create Video
-        run: |
-          # تحويل النص لصورة ثم فيديو باستخدام ffmpeg (أضمن طريقة)
-          STORY_TEXT="${{ github.event.inputs.story }}"
+          # 1. تنظيف النص وترجمته بشكل سريع
+          STORY_URL=$(echo "${{ github.event.inputs.story }}" | sed 's/ /%20/g')
           
-          # إنشاء فيديو بسيط (خلفية زرقاء ونقوش بيضاء) لمدة 5 ثواني
-          ffmpeg -f lavfi -i color=c=blue:s=1280x720:d=5 -vf \
-          "drawtext=text='$STORY_TEXT':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2" \
-          -c:v libx264 -tune stillimage -pix_fmt yuv420p final_video.mp4
+          # 2. تحميل صورة احترافية بناءً على وصفك من محرك مجاني وسريع
+          curl -o scene.jpg "https://image.pollinations.ai/prompt/${STORY_URL}?width=1280&height=720&model=flux&nologo=true"
+          
+          # 3. استخدام ffmpeg لتحويل الصورة لفيديو مع حركة زووم سينمائية
+          ffmpeg -loop 1 -i scene.jpg -vf "zoompan=z='min(zoom+0.001,1.5)':d=125:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',setsar=1" -c:v libx264 -t 5 -pix_fmt yuv420p professional_video.mp4
 
-      - name: Upload Video
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Final-Video
-          path: final_video.mp4
+          name: AI-Cinema-Video
+          path: professional_video.mp4
